@@ -84,7 +84,7 @@ def get_bot_response():
     return jsonify({'bot_response': response})
 
 if __name__ == "__main__":
-    filename = "Desc.txt"
+    filename = "AI_Bot\Desc.txt"
     prompts_responses = read_prompts_responses_from_file(filename)
     if not prompts_responses:
         print("Error: No prompts and responses found.")
