@@ -1,16 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import openai
+import os
 
 app = Flask(__name__)
 
+# Set your OpenAI API key here
+openai.api_key = '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'
 
-openai.api_key = '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'
-
-
-
+# Function to get response from OpenAI API
 def get_api_res(prompt: str) -> str|None:
     text: str | None = None
-
     try:
         response: dict = openai.ChatCompletion.create(
             model='gpt-3.5-turbo-0613',
@@ -26,25 +25,25 @@ def get_api_res(prompt: str) -> str|None:
         )
         choices: dict = response.get('choices')[0]
         text = choices.get('message', {}).get('content')
-
     except Exception as e:
         print("Error:", e)
-
     return text
 
+# Function to update the prompt list
 def update_list(message:str, prompt_list: list[str]):
     prompt_list.append(message)
 
+# Function to create a prompt
 def create_prompt(message:str, prompt_list: list[str]) -> str:
     p_message = f'\nHuman:{message}'
     update_list(p_message, prompt_list)
     prompt = ''.join(prompt_list)
     return prompt
 
+# Function to get bot response
 def get_bot_res(message:str, prompt_list: list[str]) -> str:
     prompt = create_prompt(message, prompt_list)
     bot_res = get_api_res(prompt)
-
     if bot_res:
         update_list(bot_res, prompt_list)
         pos = bot_res.find('\nbot: ')
@@ -53,6 +52,7 @@ def get_bot_res(message:str, prompt_list: list[str]) -> str:
         bot_res = 'Something went wrong'
     return bot_res
 
+# Function to read prompts and responses from file
 def read_prompts_responses_from_file(filename: str) -> dict:
     prompts_responses = {}
     try:
@@ -73,20 +73,33 @@ def read_prompts_responses_from_file(filename: str) -> dict:
         print(f"Error: File '{filename}' not found.")
         return {}
 
+# Route for the home page
 @app.route('/')
 def home():
     return render_template('index.html')
 
+# Route to handle user input and return bot response
 @app.route('/get_bot_response', methods=['POST'])
 def get_bot_response():
     user_input = request.form['user_input']
     response = get_bot_res(user_input, list(prompts_responses.keys()))
     return jsonify({'bot_response': response})
 
+# Route to handle text data sent from the HTML form
+@app.route('/txt', methods=['POST'])
+def handle_text():
+    text_data = request.form['chatInput']
+    response = get_bot_res(text_data, list(prompts_responses.keys()))
+    return jsonify({'response': response})
+
 if __name__ == "__main__":
-    filename = "AI_Bot\Desc.txt"
-    prompts_responses = read_prompts_responses_from_file(filename)
-    if not prompts_responses:
-        print("Error: No prompts and responses found.")
+    filename = "AI_Bot/Desc.txt"
+    
+    if not os.path.exists(filename):
+        print(f"Error: File '{filename}' not found.")
     else:
-        app.run(debug=True)
+        prompts_responses = read_prompts_responses_from_file(filename)
+        if not prompts_responses:
+            print("Error: No prompts and responses found.")
+        else:
+            app.run(debug=True)
